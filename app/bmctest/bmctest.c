@@ -14,6 +14,7 @@
 #include "webserver.h"
 #include "param.h"
 #include "bmctest.h"
+#include "factory.h"
 
 #include "comm_device_serial.h"
 
@@ -106,10 +107,10 @@ int g_usb_node[4][4] = {
     {1, 1, 1, 0}};
 void usb_connet_node(int num)
 {
-    gpio_out_init(USB_SEL1, g_usb_node[num][0]);
-    gpio_out_init(USB_OE1, g_usb_node[num][1]);
-    gpio_out_init(USB_SEL2, g_usb_node[num][2]);
-    gpio_out_init(USB_OE2, g_usb_node[num][3]);
+    gpio_out_init(USB_SEL1, g_usb_node[num][0]);     //PG1
+    gpio_out_init(USB_OE1, g_usb_node[num][1]);     //PG2
+    gpio_out_init(USB_SEL2, g_usb_node[num][2]);    //PG0
+    gpio_out_init(USB_OE2, g_usb_node[num][3]);     //PG3
 }
 
 int g_usb_mode[4] = {PORT1_RPIBOOT, PORT2_RPIBOOT, PORT3_RPIBOOT, PORT4_RPIBOOT};
@@ -174,7 +175,8 @@ void bmc_init(void)
     common_device_gpioWirte(RESET_LED, GPIO_L);
 
     usb_boot_init();
-    usb0_default_mode();
+    // usb0_default_mode();
+    ctrl_usbconnet(0,1);    // 工厂默认连接第二个
     gpio_out_init(RTL_RESET, GPIO_H);
 
     gpio_out_init(POWER_EN, GPIO_L);
@@ -332,6 +334,51 @@ bool get_power_status()
 }
 
 
+
+bool led_blink_run = false;
+void* led_blink(void* arg)
+{
+    pthread_detach(pthread_self());
+    printf("start led blink run----\n");
+    int status = 0;
+    while(led_blink_run)
+    {
+        status = ~status;
+        common_device_gpioWirte(SYS_LED, status);
+        usleep(500*1000);
+    }
+    common_device_gpioWirte(SYS_LED, GPIO_L);
+    printf("led run over----\n");
+}
+
+int ctrl_led_blink(int offon)
+{
+    int ret = 0;
+    pthread_t pid;
+    if(1==offon)
+    {
+        if(false == led_blink_run)
+        {
+            led_blink_run = true;
+            ret = pthread_create(&pid, NULL, led_blink, NULL);
+            if (ret)
+            {
+                led_blink_run = false;
+                printf("pthread_create error\n");
+                return -1;
+            }
+        }
+    }
+    if(0==offon)
+    {
+        if(true == led_blink_run)
+            led_blink_run = false;
+    }
+}
+
+
+
+
 /**
  * @brief 按键控制线程
  * TODO：led灯控制
@@ -344,7 +391,7 @@ void *key_thread(void *arg)
     int i;
     pthread_detach(pthread_self());
     printf("start key thread----\n");
-    int power_flag = false;
+    int power_flag = true;
 
     bool reset_led_status = GPIO_H;
 
@@ -359,9 +406,16 @@ void *key_thread(void *arg)
                 power_flag = true;
                 printf("poweron----------->\n");
                 poweron();
+                ctrl_led_blink(1);
+                factory_multiple();
+                // sleep(12);
+                // factory_mode();
+                // ctrl_led_blink(0);
             }
             else
             {
+                ctrl_led_blink(0);
+                stop_fac();
                 power_flag = false;
                 printf("poweroff-----------<\n");
                 for (i = 0; i < 4; ++i)
@@ -691,7 +745,10 @@ int main(int argc, char *argv[])
         printf("pthread_create error\n");
         return -1;
     }
-
+    poweron();
+    ctrl_led_blink(1);
+    factory_multiple();
+#if 0   //串口读取设备类型用的
     node_uart_init();
 
 
@@ -702,6 +759,7 @@ int main(int argc, char *argv[])
     }
 
     printf("pthread end\n");
+#endif
     webstart();
     return 0;
 }

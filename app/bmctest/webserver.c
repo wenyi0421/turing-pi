@@ -16,6 +16,7 @@
 #include "param.h"
 #include <stdbool.h>
 #include "bmctest.h"
+#include "factory.h"
 #include <linux/reboot.h>
 
 #define  SD_PATH "/mnt/sdcard"
@@ -333,6 +334,107 @@ static int set_uartCmd(Webs* wp)
     return 0;
 }
 
+int get_sdcard_total(char* data)
+{
+    unsigned long long total;
+    unsigned long long free;
+    unsigned long long use;
+
+    struct statfs hfs = {0};
+	unsigned long long block_size = 0;
+    
+    if(check_sdcard_mount_status())
+    {
+        if(statfs(SD_PATH,&hfs))
+        {
+            printf("get sd error\n");
+            return -1;
+        }
+    }
+	
+	block_size = hfs.f_bsize;
+	total = (hfs.f_blocks * block_size)>>20;
+	free = (hfs.f_bavail * block_size)>>20;
+	use = total - free;
+    sprintf(data,"%ld MB",total);
+    return 0;
+}
+
+
+static int get_factory(Webs* wp)
+{
+    /*--json start--*/
+    int i;
+    int usbnum = 1;
+    char usbname[64];
+    char total[128];
+    cJSON* pRoot = cJSON_CreateObject();
+    cJSON* pArray = cJSON_CreateArray();
+    cJSON_AddItemToObject(pRoot, "response", pArray);
+    cJSON* pItem = NULL;
+
+
+    // env_usb_t* usb = &(env_get_ctx()->usb);
+    FAC_RESULT_t* fac = get_fac_result();
+
+    get_sdcard_total(total);
+
+    /*--json body--*/
+    pItem = cJSON_CreateObject();
+    cJSON_AddStringToObject(pItem, "sdcard", total);
+	cJSON_AddStringToObject(pItem, "n1pci", fac->node[0].pcie);  
+	cJSON_AddStringToObject(pItem, "n1usbotg", fac->node[0].usbotg);  
+	cJSON_AddStringToObject(pItem, "n1ip", fac->node[0].ip);  
+	cJSON_AddStringToObject(pItem, "n1ssd", fac->node[0].ssd);  
+
+	cJSON_AddStringToObject(pItem, "n2pci", fac->node[1].pcie);  
+	cJSON_AddStringToObject(pItem, "n2usbotg", fac->node[1].usbotg);  
+	cJSON_AddStringToObject(pItem, "n2ip", fac->node[1].ip);
+    cJSON_AddStringToObject(pItem, "n2ssd", fac->node[1].ssd);  
+
+	cJSON_AddStringToObject(pItem, "n3pci", fac->node[2].pcie);  
+	cJSON_AddStringToObject(pItem, "n3usbotg", fac->node[2].usbotg);  
+	cJSON_AddStringToObject(pItem, "n3ip", fac->node[2].ip);
+    cJSON_AddStringToObject(pItem, "n3ssd", fac->node[2].ssd);  
+    cJSON_AddStringToObject(pItem, "n3disk1", fac->node[2].disk1);  
+	cJSON_AddStringToObject(pItem, "n3disk2", fac->node[2].disk2);
+      
+
+	cJSON_AddStringToObject(pItem, "n4pci", fac->node[3].pcie);  
+	// cJSON_AddStringToObject(pItem, "n4usbotg", fac->node[3].usbotg);  
+	cJSON_AddStringToObject(pItem, "n4ip", fac->node[3].ip);
+    cJSON_AddStringToObject(pItem, "n4ssd", fac->node[3].ssd);  
+    for(i=0;i<5;++i)
+    {
+        if(strlen(fac->node[3].usbotg)>4 && NULL!=strstr(fac->node[3].usb[i],fac->node[3].usbotg))
+        {
+            cJSON_AddStringToObject(pItem, "n4usbotg", fac->node[3].usb[i]);  
+        }
+        else
+        {
+            memset(usbname,0,sizeof(usbname));
+            snprintf(usbname,sizeof(usbname),"n4usb%d",usbnum++);   
+            cJSON_AddStringToObject(pItem, usbname, fac->node[3].usb[i]);
+        }
+    }
+
+    cJSON_AddItemToArray(pArray, pItem);
+
+
+    /*--json end--*/
+    char* szJSON = cJSON_Print(pRoot);
+    // printf("%s\n", szJSON);
+
+    websWrite(wp, szJSON);
+    websFlush(wp, 0);
+    websDone(wp);
+
+    cJSON_Delete(pRoot);
+    return 0;
+}
+
+
+
 
 
 static int set_nodepower(Webs* wp)
@@ -582,6 +684,10 @@ static void bmcdemo(Webs *wp)
         else if(0==strcasecmp(pType,"uart"))
         {
             get_uartString(wp);
+        }
+        else if(0==strcasecmp(pType,"factory"))
+        {
+            get_factory(wp);
         }
         // strcpy(json_result_buff,"{\"response\":[{\"result\":\"ok\"}]}");
         // websWrite(wp, "%s", json_result_buff);

@@ -119,6 +119,8 @@ function page_http_req_get(uUrl, lType) {
       C_getCBResuleParsePowerDisp(json);
     else if(lType == 'nodeinfo')
       C_getCBResuleParseNodeInfoDisp(json);  
+    else if(lType == 'factory')
+    C_getCBResuleParsefactoryDisp(json);  
 
   }
 }
