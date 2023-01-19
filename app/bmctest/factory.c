@@ -376,20 +376,30 @@ void* fac_thread_proc(void* arg)
 void* usb_thread_proc(void* arg)
 {
     int i;
+    bool led_first = true;
+    int usb_count[4] = {0};
     pthread_detach(pthread_self());
     
     while(fac_run)
     {
-        if(strlen(g_fac_info.node[1].usbotg)<4)
+        if(strlen(g_fac_info.node[1].usbotg)<4 && ++usb_count[1]<15)
         {
             ctrl_usbconnet(0,1);
         }
-        else if(strlen(g_fac_info.node[2].usbotg)<4)
+        else if(strlen(g_fac_info.node[2].usbotg)<4 && ++usb_count[2] < 10)
         {
             ctrl_usbconnet(0,2);
-        }else if(strlen(g_fac_info.node[3].usbotg)<4)
+        }else if(strlen(g_fac_info.node[3].usbotg)<4 && ++usb_count[3] < 10)
         {
             ctrl_usbconnet(0,3);
+        }
+        else
+        {
+            if(led_first)
+            {   
+                led_first = false;
+                ctrl_led_blink(0);
+            }
         }
         sleep(3);
     }
