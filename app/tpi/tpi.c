@@ -44,12 +44,12 @@ bool power(int arg)
 {
     char cmd[128] = {0};
     if(arg==1)
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=set&type=power&node1=1&node2=1&node3=1&node4=1'",host);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=set&type=power&node1=1&node2=1&node3=1&node4=1'",host);
     else if(0==arg)
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=set&type=power&node1=0&node2=0&node3=0&node4=0'",host);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=set&type=power&node1=0&node2=0&node3=0&node4=0'",host);
     else if(2 == arg)
     {
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=get&type=power'",host);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=get&type=power'",host);
     }
     system(cmd);
 }
@@ -58,16 +58,16 @@ bool usb_ctrl(int mode,int node)
 {
     char cmd[128] = {0};
     if(mode==2)
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=get&type=usb'",host);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=get&type=usb'",host);
     else 
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=set&type=usb&mode=%d&node=%d'",host,mode,node-1);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=set&type=usb&mode=%d&node=%d'",host,mode,node-1);
     system(cmd);
 }
 
 bool resetSW(void)
 {
     char cmd[128] = {0};
-    sprintf(cmd,"curl 'http://%s/api/bmc?opt=set&type=network&cmd=reset'",host);
+    snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=set&type=network&cmd=reset'",host);
     system(cmd);
 }
 
@@ -75,12 +75,12 @@ bool uart_ctrl(int mode,int node,char* data)
 {
     char cmd[128] = {0};
     if(mode==0)
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=get&type=uart&node=%d'",host,node);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=get&type=uart&node=%d'",host,node);
     else 
     {
         if(NULL==data)
             return false;
-        sprintf(cmd,"curl 'http://%s/api/bmc?opt=set&type=uart&node=%d&cmd=%s'",host,node,data);
+        snprintf(cmd,sizeof(cmd),"curl 'http://%s/api/bmc?opt=set&type=uart&node=%d&cmd=%s'",host,node,data);
     }
         
     system(cmd);
@@ -92,7 +92,7 @@ bool update_fw(char* file)
     bool ret = false;
     char cmd[128] = {0};
     char line[1024] = {0};
-    sprintf(cmd,"curl -F 'file=@%s' 'http://%s/api/bmc?opt=set&type=firmware'",file,host);
+    snprintf(cmd,sizeof(cmd),"curl -F 'file=@%s' 'http://%s/api/bmc?opt=set&type=firmware'",file,host);
 
     FILE* pp = popen(cmd,"r");
     if(pp)
@@ -406,11 +406,11 @@ int main(int argc, char *argv[])
             case 'F':
             {
                 mode = 4;
-                strcpy(up_file,optarg);
+                strncpy(up_file,optarg,sizeof(up_file));
             }
             case 'C':
             {
-                strcpy(uart_cmd,optarg);
+                strncpy(uart_cmd,optarg,sizeof(uart_cmd));
                 break;
             }
             default:
