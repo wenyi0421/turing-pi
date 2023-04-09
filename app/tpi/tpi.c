@@ -406,11 +406,11 @@ int main(int argc, char *argv[])
             case 'F':
             {
                 mode = 4;
-                strcpy(up_file,optarg);
+                strncpy(up_file,optarg,sizeof(up_file));
             }
             case 'C':
             {
-                strcpy(uart_cmd,optarg);
+                strncpy(uart_cmd,optarg,sizeof(uart_cmd));
                 break;
             }
             default:
