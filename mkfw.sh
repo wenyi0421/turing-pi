@@ -1,13 +1,13 @@
 #!/bin/sh
 
-date=`date +%F`
+date=$(date +%F)
 
 version=$1
 
 if [ 1 != $# ]; then
 	echo please input version
 fi
-echo $1 |grep "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$" > /dev/null
+echo "${1}" |grep "^[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}$" > /dev/null
 if [ $? = 1 ];then
 	echo version 0~999 and must 3 version eg:1.1.1
 	echo ./mkfw.sh "<version>"
@@ -30,14 +30,13 @@ echo "Date: ${date}"
 echo "build fw"
 make -C buildroot bmc-rebuild V=1
 make -C buildroot V=1
-echo "cp -rf buildroot/output/images/buildroot_linux_nand_uart3.img ./build/${date}/turingpi-${version}.img"
-cp -rf buildroot/output/images/buildroot_linux_nand_uart3.img ./build/${date}/turingpi-${version}.img
+cp -vrf buildroot/output/images/buildroot_linux_nand_uart3.img "./build/${date}/turingpi-${version}.img"
 
-cd buildroot/output/images/
+cd buildroot/output/images/ || exit 1
 ./genSWU.sh
-cd -
+cd - || exit 1
 
-cp -rf ./buildroot/output/images/turingpi_.swu ./build/${date}/turingpi-${version}.swu
+cp -vrf ./buildroot/output/images/turingpi_.swu ."/build/${date}/turingpi-${version}.swu"
 
 echo "build turing pi firmware over"
 if [ ! -f "build/tpi/linux/tpi" ];then
